@@ -5,10 +5,12 @@ from pystray import Icon, MenuItem, Menu
 from PIL import Image, ImageDraw
 import threading
 import status
+import sys
+import subprocess
 
 def tray_thread():
     global icon
-    icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu(MenuItem("Exit", exit_app)))
+    icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu(MenuItem("Reset", reset_timer), MenuItem("Exit", exit_app)))
     threading.Thread(target=update, daemon=True).start()
     icon.run()
 
@@ -48,3 +50,12 @@ def update():
 def exit_app(icon, item):
     icon.stop()
     os._exit(0)
+
+def reset_timer():
+    """Zamyka aplikację i ponownie ją uruchamia."""
+    python = sys.executable  # Ścieżka do aktualnie używanego interpretera Pythona
+    script = sys.argv[0]  # Aktualnie uruchomiony skrypt
+
+    icon.stop()  # Zamyka ikonę w trayu
+    subprocess.Popen([python, script])  # Uruchamia nową instancję skryptu
+    sys.exit(0)  # Kończy bieżącą instancję aplikacji

@@ -8,6 +8,8 @@ import status
 PORT = "COM5"
 BAUDRATE = 9600
 
+time.sleep(5)
+
 try:
     ser = serial.Serial(PORT, BAUDRATE, timeout=1)
 except Exception as e:
