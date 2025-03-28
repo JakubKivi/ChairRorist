@@ -6,7 +6,7 @@ def sendWarning(sitting_time):
     notify("Podnosimy dupsko!", f"Siedzisz już od {sitting_time}")
 
 
-def notify(title, message):
+def notify(title, message, ):
     """Wysyła powiadomienie do użytkownika"""
     notification.notify(
         title=title,          

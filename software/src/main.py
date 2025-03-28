@@ -8,8 +8,6 @@ import status
 PORT = "COM5"
 BAUDRATE = 9600
 
-time.sleep(5)
-
 try:
     ser = serial.Serial(PORT, BAUDRATE, timeout=1)
 except Exception as e:
@@ -17,7 +15,7 @@ except Exception as e:
     print(f"Error! Failed to connect to: {PORT}: {e}")
     exit(1)
 
-threading.Thread(target=tray.tray_thread, daemon=True).start()
+threading.Thread(target=tray.tray_thread, args=(ser,), daemon=True).start()
 
 while True:
     try:

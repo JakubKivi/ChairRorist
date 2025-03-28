@@ -8,9 +8,9 @@ import status
 import sys
 import subprocess
 
-def tray_thread():
+def tray_thread(ser):
     global icon
-    icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu(MenuItem("Reset", reset_timer), MenuItem("Exit", exit_app)))
+    icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu(MenuItem("Reset", lambda icon, item: reset_timer(icon, item, ser)), MenuItem("Exit", exit_app)))
     threading.Thread(target=update, daemon=True).start()
     icon.run()
 
@@ -19,11 +19,11 @@ def update_icon():
     """Updates tray icon image"""
 
     if status.get_sitting_time() == 0:
-        icon_path = os.path.abspath("images/Standing.ico")
+        icon_path = os.path.abspath("images/standing.ico")
     elif status.get_sitting_time() > status.get_alert_interval():
-        icon_path = os.path.abspath("images/Exploding.ico")
+        icon_path = os.path.abspath("images/exploding.ico")
     else:
-        icon_path = os.path.abspath("images/Sitting.ico")
+        icon_path = os.path.abspath("images/sitting.ico")
 
     try:
         icon.icon = Image.open(icon_path)  
@@ -47,12 +47,16 @@ def update():
             icon.title = "You are standing!"
         time.sleep(status.get_polling_interval())  
 
+
 def exit_app(icon, item):
     icon.stop()
     os._exit(0)
 
-def reset_timer():
+
+def reset_timer(icon, item, ser):
     """Zamyka aplikację i ponownie ją uruchamia."""
+
+    ser.close()
     python = sys.executable  # Ścieżka do aktualnie używanego interpretera Pythona
     script = sys.argv[0]  # Aktualnie uruchomiony skrypt
 
