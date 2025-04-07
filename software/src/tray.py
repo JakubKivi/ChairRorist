@@ -10,7 +10,12 @@ import subprocess
 
 def tray_thread(ser):
     global icon
-    icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu(MenuItem("Reset", lambda icon, item: reset_timer(icon, item, ser)), MenuItem("Exit", exit_app)))
+    icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu( 
+        # MenuItem("Stop", toggle_timer), 
+        MenuItem("Reset", lambda icon, item: reset_timer(icon, item, ser)), 
+        MenuItem("Exit", exit_app)
+        )
+    )
     threading.Thread(target=update, daemon=True).start()
     icon.run()
 
@@ -63,3 +68,8 @@ def reset_timer(icon, item, ser):
     icon.stop()  # Zamyka ikonę w trayu
     subprocess.Popen([python, script])  # Uruchamia nową instancję skryptu
     sys.exit(0)  # Kończy bieżącą instancję aplikacji
+
+
+# def toggle_timer():
+#     """Zatrzymuje i uruchamia ponownie timer"""
+#     sys.exit(0)  # Kończy bieżącą instancję aplikacji
