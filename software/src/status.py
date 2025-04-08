@@ -4,7 +4,7 @@ import utils
 
 _sitting_time = 0
 _sitting_time_formatted = ""
-_polling_interval = 60
+_polling_interval =60
 _alert_interval = 3600
 _last_alert_time = time.time()
 _connected = False

@@ -3,7 +3,7 @@ import os
 
 def sendWarning(sitting_time):
     """Wysyła warninga z czasem jako powiadomienie windowsa"""          #TODO Jakieś fajne teksty czy coś XD
-    notify("Podnosimy dupsko!", f"Siedzisz już od {sitting_time}")
+    notify("Lift your ass!", f"Sitting time {sitting_time}")
 
 
 def notify(title, message, ):
