@@ -1,4 +1,5 @@
 from plyer import notification
+from winotify import Notification, audio
 import os
 
 def sendWarning(sitting_time):
@@ -6,7 +7,21 @@ def sendWarning(sitting_time):
     notify("Lift your ass!", f"Sitting time {sitting_time}")
 
 
-def notify(title, message, ):
+
+def notify(title: str, message: str, icon_path: str = None):
+    toast = Notification(
+        app_id="ChairRorist",
+        title=title,
+        msg=message,
+        icon=os.path.abspath("images/Exploding.ico")  # tu możesz podać ścieżkę do ikony, nie pojawi się w trayu
+    )
+    toast.set_audio(audio.Default, loop=False)
+    toast.show()
+    print("dupa")
+
+
+
+def DEPRECATED_notify(title, message, ):
     """Wysyła powiadomienie do użytkownika"""
     notification.notify(
         title=title,          
