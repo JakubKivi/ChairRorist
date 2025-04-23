@@ -28,10 +28,10 @@ def get_last_alert_time():
     return _last_alert_time
 
 def _check_main_only():
-    """Checks if function is called from z main.py"""
+    """Checks if function is called from z ChairRorist.py"""
     caller = sys._getframe(2).f_globals.get("__file__", "")
-    if not caller.endswith("main.py"):
-        raise RuntimeError("Error! Changing status values outside main.py!")
+    if not caller.endswith("ChairRorist.py"):
+        raise RuntimeError("Error! Changing status values outside ChairRorist.py!")
 
 def set_connected(value):
     _check_main_only()
