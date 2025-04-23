@@ -1,5 +1,5 @@
 # Ścieżka do pliku main.py
-SRC = .\software\src\main.py
+SRC = .\software\src\ChairRorist.py
 
 # Ścieżka do ikony
 ICON = .\images\sitting.ico

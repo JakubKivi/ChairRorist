@@ -1,10 +1,31 @@
 from plyer import notification
 from winotify import Notification, audio
 import os
+import random
+
+def randomAllertLine(filename=os.path.abspath("data/allerts.chairRorist")):
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            lines = sum(1 for _ in f)
+
+        if lines == 0:
+            return "File empty"  
+
+        id = random.randint(0, lines - 1)
+
+        with open(filename, 'r', encoding='utf-8') as f:
+            for i, line in enumerate(f):
+                if i == id:
+                    return line.strip()
+
+    except FileNotFoundError:
+        return "Canot find file"
+
+
 
 def sendWarning(sitting_time):
-    """Wysyła warninga z czasem jako powiadomienie windowsa"""          #TODO Jakieś fajne teksty czy coś XD
-    notify("Lift your ass!", f"Sitting time {sitting_time}")
+    """Wysyła warninga z czasem jako powiadomienie windowsa""" 
+    notify(randomAllertLine(), f"Sitting time {sitting_time}")
 
 
 
@@ -17,7 +38,6 @@ def notify(title: str, message: str, icon_path: str = None):
     )
     toast.set_audio(audio.Default, loop=False)
     toast.show()
-    print("dupa")
 
 
 
