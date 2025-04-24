@@ -1,9 +1,23 @@
 from plyer import notification
 from winotify import Notification, audio
 import os
+import sys
 import random
 
-def randomAllertLine(filename=os.path.abspath("data/allerts.chairRorist")):
+
+def get_data_file():
+    if getattr(sys, 'frozen', False):
+        # EXE uruchomiony z dist/, dane są w ../data/
+        base_path = os.path.dirname(sys.executable)
+        data_path = os.path.join(base_path, '..', 'data', 'allerts.chairRorist')
+    else:
+        # Skrypt uruchomiony z software/src/, dane są w ../../data/
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        data_path = os.path.join(base_path, '..', '..', 'data', 'allerts.chairRorist')
+
+    return os.path.abspath(data_path)
+
+def randomAllertLine(filename=get_data_file()):
     try:
         with open(filename, 'r', encoding='utf-8') as f:
             lines = sum(1 for _ in f)
