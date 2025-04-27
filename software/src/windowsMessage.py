@@ -3,6 +3,7 @@ from winotify import Notification, audio
 import os
 import sys
 import random
+import status
 
 
 def get_data_file():
@@ -37,9 +38,9 @@ def randomAllertLine(filename=get_data_file()):
 
 
 
-def sendWarning(sitting_time):
+def sendWarning():
     """Wysyła warninga z czasem jako powiadomienie windowsa""" 
-    notify(randomAllertLine(), f"Sitting time {sitting_time}")
+    notify(randomAllertLine(), f"Sitting time {status.get_sitting_time_formatted()}")
 
 
 

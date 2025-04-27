@@ -2,6 +2,7 @@ import os
 import time
 from pystray import Icon, MenuItem, Menu
 from PIL import Image, ImageDraw
+from windowsMessage import sendWarning
 import threading
 import status
 import sys
@@ -11,6 +12,7 @@ def tray_thread(ser):
     global icon
     icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu( 
         # MenuItem("Stop", toggle_timer), 
+        MenuItem("Show Warning", sendWarning), 
         MenuItem("Reset", lambda icon, item: reset_timer(icon, item, ser)), 
         MenuItem("Exit", exit_app)
         )

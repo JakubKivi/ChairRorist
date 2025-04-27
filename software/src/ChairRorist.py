@@ -27,7 +27,7 @@ while True:
             if state == 0:
                 status.increment()
                 if status.check():
-                    wM.sendWarning(status.get_sitting_time_formatted())
+                    wM.sendWarning()
                     status.set_last_alert_time(time.time())
             else:
                 status.stading()
