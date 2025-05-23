@@ -1,17 +1,25 @@
 import os
 import time
 from pystray import Icon, MenuItem, Menu
-from PIL import Image, ImageDraw
-from windowsMessage import sendWarning
+from PIL import Image
+from windowsMessage import sendWarning, get_data_file_path
 import threading
 import status
 import sys
 import subprocess
+import struct
+
+ignored = "Ignored: "+str(status.get_ignored_notifications())
+respected = "Respected: "+str(status.get_realised_notifications())
 
 def tray_thread(ser):
     global icon
+    
     icon = Icon("ChairRorist", Image.open("images/Sitting.ico"), menu=Menu( 
-        # MenuItem("Stop", toggle_timer), 
+        MenuItem(lambda text: ignored, None, enabled=False),
+        MenuItem(lambda text: respected , None, enabled=False),
+        # MenuItem("Stop", toggle_timer), TODO
+        Menu.SEPARATOR,
         MenuItem("Show Warning", sendWarning), 
         MenuItem("Reset", lambda icon, item: reset_timer(icon, item, ser)), 
         MenuItem("Exit", exit_app)
@@ -19,6 +27,7 @@ def tray_thread(ser):
     )
     threading.Thread(target=update, daemon=True).start()
     icon.run()
+
 
 
 def update_icon():
@@ -51,6 +60,20 @@ def update():
             icon.title = f"Sitting time: {status.get_sitting_time_formatted()}"
         else:
             icon.title = "You are standing!"
+
+        ignoredIn, realisedIn = load_data()
+        status.set_ignored_notifications(ignoredIn)
+        status.set_realised_notifications(realisedIn)
+
+        global ignored
+        global respected
+
+        ignored = "Ignored: "+str(ignoredIn)
+        respected = "Respected: "+str(realisedIn)
+
+        icon.update_menu()
+        print("updated")
+
         time.sleep(status.get_polling_interval())  
 
 
@@ -70,6 +93,18 @@ def reset_timer(icon, item, ser):
     subprocess.Popen([python, script])  # Uruchamia nową instancję skryptu
     sys.exit(0)  # Kończy bieżącą instancję aplikacji
 
+
+
+    
+def load_data():
+    path = get_data_file_path()
+    if not os.path.exists(path):
+        return (0, 0)
+    with open(path, 'rb') as f:
+        data = f.read(8)
+        if len(data) < 8:
+            return (0, 0)
+        return struct.unpack('ii', data)
 
 # def toggle_timer():
 #     """Zatrzymuje i uruchamia ponownie timer"""

@@ -1,6 +1,7 @@
 import sys
 import time
 import utils
+import windowsMessage as wm
 
 _sitting_time = 0
 _sitting_time_formatted = ""
@@ -8,6 +9,10 @@ _polling_interval = 60
 _alert_interval = 3600
 _last_alert_time = time.time()
 _connected = False
+_ignored_notifications = 0
+_realised_nofications = 0
+
+_respected_counted_flag = False
 
 def get_conntected():
     return _connected
@@ -26,6 +31,20 @@ def get_alert_interval():
 
 def get_last_alert_time():
     return _last_alert_time
+
+def get_ignored_notifications():
+    return _ignored_notifications
+
+def set_ignored_notifications(value):
+    global _ignored_notifications
+    _ignored_notifications = value
+
+def get_realised_notifications():
+    return _realised_nofications
+
+def set_realised_notifications(value):
+    global _realised_notifications
+    _realised_notifications = value
 
 def _check_main_only():
     """Checks if function is called from z ChairRorist.py"""
@@ -60,13 +79,26 @@ def increment():
     _sitting_time += _polling_interval
     global _sitting_time_formatted
     _sitting_time_formatted = utils.format_time(_sitting_time)
+    global _respected_counted_flag
+    _respected_counted_flag = False
 
 def check():
     return time.time() - _last_alert_time >= _alert_interval
 
 def stading():
-    _check_main_only()
+
+    global _respected_counted_flag
     global _sitting_time
+    
+    if not _respected_counted_flag:
+        _respected_counted_flag = True
+
+        if _sitting_time >= 3600:
+            global _realised_nofications
+            _realised_nofications += 1
+            wm.save_data(_ignored_notifications, _realised_nofications)
+    
+    _check_main_only()
     _sitting_time = 0
     global _last_alert_time
     _last_alert_time = time.time()

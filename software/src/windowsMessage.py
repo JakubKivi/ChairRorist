@@ -4,9 +4,10 @@ import os
 import sys
 import random
 import status
+import struct
 
 
-def get_data_file():
+def get_allerts_file_path():
     if getattr(sys, 'frozen', False):
         # EXE uruchomiony z dist/, dane są w ../data/
         base_path = os.path.dirname(sys.executable)
@@ -18,7 +19,22 @@ def get_data_file():
 
     return os.path.abspath(data_path)
 
-def randomAllertLine(filename=get_data_file()):
+
+def get_data_file_path():
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
+    if getattr(sys, 'frozen', False):  # .exe
+        return os.path.abspath(os.path.join(base_path, '..', 'data', 'data.chairRorist'))
+    else:  # .py
+        return os.path.abspath(os.path.join(base_path, '..', '..', 'data', 'data.chairRorist'))
+    
+
+def save_data(int1, int2):
+    path = get_data_file_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'wb') as f:
+        f.write(struct.pack('ii', int1, int2))
+
+def randomAllertLine(filename=get_allerts_file_path()):
     try:
         with open(filename, 'r', encoding='utf-8') as f:
             lines = sum(1 for _ in f)
@@ -40,8 +56,14 @@ def randomAllertLine(filename=get_data_file()):
 
 def sendWarning():
     """Wysyła warninga z czasem jako powiadomienie windowsa""" 
-    notify(randomAllertLine(), f"Sitting time {status.get_sitting_time_formatted()}")
+    print(status.get_ignored_notifications())
+    print(status.get_realised_notifications())
 
+    notify(randomAllertLine(), f"Sitting time {status.get_sitting_time_formatted()}")
+    if status.get_sitting_time() > 5400:
+        current=status.get_ignored_notifications()
+        status.set_ignored_notifications(current+1)
+        save_data(current+1, status.get_realised_notifications())
 
 
 def notify(title: str, message: str, icon_path: str = None):
@@ -66,3 +88,7 @@ def DEPRECATED_notify(title, message, ):
         timeout=1,
         toast=True
     )
+
+
+
+    
