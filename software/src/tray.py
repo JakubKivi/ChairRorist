@@ -12,6 +12,8 @@ import struct
 ignored = "Ignored: "+str(status.get_ignored_notifications())
 respected = "Respected: "+str(status.get_realised_notifications())
 
+muteText = "Mute"
+
 def tray_thread(ser):
     global icon
     
@@ -20,6 +22,7 @@ def tray_thread(ser):
         MenuItem(lambda text: respected , None, enabled=False),
         # MenuItem("Stop", toggle_timer), TODO
         Menu.SEPARATOR,
+        MenuItem(lambda text : muteText, toggle_mute), 
         MenuItem("Show Warning", sendWarning), 
         MenuItem("Reset", lambda icon, item: reset_timer(icon, item, ser)), 
         MenuItem("Exit", exit_app)
@@ -28,7 +31,10 @@ def tray_thread(ser):
     threading.Thread(target=update, daemon=True).start()
     icon.run()
 
-
+def toggle_mute(icon, item):
+    global muteText
+    muteText = "Mute" if status.get_muted() else "Unmute"
+    status.set_muted(not status.get_muted())
 
 def update_icon():
     """Updates tray icon image"""

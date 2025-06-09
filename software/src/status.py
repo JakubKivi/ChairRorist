@@ -9,8 +9,11 @@ _polling_interval = 60
 _alert_interval = 3600
 _last_alert_time = time.time()
 _connected = False
+
 _ignored_notifications = 0
 _realised_nofications = 0
+
+_muted = False
 
 _respected_counted_flag = False
 
@@ -45,6 +48,15 @@ def get_realised_notifications():
 def set_realised_notifications(value):
     global _realised_notifications
     _realised_notifications = value
+
+def get_muted():
+    """Returns if the notifications are muted"""
+    return _muted
+
+def set_muted(value):
+    """Sets the muted status of notifications"""
+    global _muted
+    _muted = value
 
 def _check_main_only():
     """Checks if function is called from z ChairRorist.py"""

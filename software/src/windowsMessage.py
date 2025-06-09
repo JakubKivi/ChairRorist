@@ -5,6 +5,8 @@ import sys
 import random
 import status
 import struct
+import winsound  # do dźwięku
+
 
 
 def get_allerts_file_path():
@@ -19,12 +21,26 @@ def get_allerts_file_path():
 
     return os.path.abspath(data_path)
 
+def get_sound_file_path():
+    if getattr(sys, 'frozen', False):
+        # EXE uruchomiony z dist/, dane są w ../data/
+        base_path = os.path.dirname(sys.executable)
+        data_path = os.path.join(base_path, '..', 'data', 'sound.wav')
+    else:
+        # Skrypt uruchomiony z software/src/, dane są w ../../data/
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        data_path = os.path.join(base_path, '..', '..', 'data', 'sound.wav')
+
+    return os.path.abspath(data_path)
 
 def get_data_file_path():
-    base_path = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
+    
+
     if getattr(sys, 'frozen', False):  # .exe
+        base_path = os.path.dirname(sys.executable)
         return os.path.abspath(os.path.join(base_path, '..', 'data', 'data.chairRorist'))
     else:  # .py
+        base_path = os.path.dirname(os.path.abspath(__file__))
         return os.path.abspath(os.path.join(base_path, '..', '..', 'data', 'data.chairRorist'))
     
 
@@ -56,10 +72,9 @@ def randomAllertLine(filename=get_allerts_file_path()):
 
 def sendWarning():
     """Wysyła warninga z czasem jako powiadomienie windowsa""" 
-    print(status.get_ignored_notifications())
-    print(status.get_realised_notifications())
-
-    notify(randomAllertLine(), f"Sitting time {status.get_sitting_time_formatted()}")
+    
+    if not status.get_muted():
+        notify(randomAllertLine(), f"Sitting time {status.get_sitting_time_formatted()}")
     if status.get_sitting_time() > 5400:
         current=status.get_ignored_notifications()
         status.set_ignored_notifications(current+1)
@@ -68,13 +83,20 @@ def sendWarning():
 
 def notify(title: str, message: str, icon_path: str = None):
     toast = Notification(
-        app_id="ChairRorist",
+        app_id="ChairRorist_v0.2",
         title=title,
         msg=message,
         icon=os.path.abspath("images/Exploding.ico")  # tu możesz podać ścieżkę do ikony, nie pojawi się w trayu
     )
-    toast.set_audio(audio.Default, loop=False)
+
+    toast.set_audio(audio.Default  , loop=False)
     toast.show()
+    
+    try:
+        winsound.PlaySound(get_sound_file_path(), winsound.SND_FILENAME)
+
+    except Exception as e:
+        print(f"Error playing sound: {e}")
 
 
 
