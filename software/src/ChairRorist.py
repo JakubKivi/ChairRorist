@@ -4,8 +4,9 @@ import threading
 import windowsMessage as wM
 import tray
 import status
+import hotkeys
 
-PORT = "COM5"
+PORT = "COM3"
 BAUDRATE = 9600
 
 try:
@@ -16,6 +17,15 @@ except Exception as e:
     exit(1)
 
 threading.Thread(target=tray.tray_thread, args=(ser,), daemon=True).start()
+threading.Thread(
+    target=hotkeys.listen_hotkey,
+    args=(
+        "ctrl+shift+alt+d",
+        lambda: tray.reset_timer(tray.icon, None, ser),
+        lambda: wM.notify("Timer Reset", "Sitting timer has been reset."),
+    ),
+    daemon=True,
+).start()
 
 while True:
     try:
