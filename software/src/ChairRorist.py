@@ -21,8 +21,10 @@ threading.Thread(
     target=hotkeys.listen_hotkey,
     args=(
         "ctrl+shift+alt+d",
+        lambda: wM.notify(
+            "Timer Reset", "Sitting timer has been reset.", "images/standing.ico"
+        ),
         lambda: tray.reset_timer(tray.icon, None, ser),
-        lambda: wM.notify("Timer Reset", "Sitting timer has been reset."),
     ),
     daemon=True,
 ).start()
