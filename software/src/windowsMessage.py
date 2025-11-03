@@ -95,8 +95,10 @@ def notify(title: str, message: str, icon_path: str = "images/Exploding.ico"):
         icon=os.path.abspath(icon_path),
     )
 
-    # toast.set_audio(Audio(silent=True))
-    toast.set_audio(audio(silent=True))
+    if icon_path == "images/Exploding.ico":
+        toast.set_audio(audio.Default, loop=False)
+    else:
+        toast.set_audio(audio.Silent, loop=False)
     toast.show()
 
     try:
