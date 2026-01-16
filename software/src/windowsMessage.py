@@ -6,13 +6,15 @@ import random
 import status
 import struct
 import winsound  # do dźwięku
+import status
+import logger
 
 
 def get_allerts_file_path():
     if getattr(sys, "frozen", False):
-        # EXE uruchomiony z dist/, dane są w ../data/
-        base_path = os.path.dirname(sys.executable)
-        data_path = os.path.join(base_path, "..", "data", "allerts.chairRorist")
+        # EXE uruchomiony, dane są w _MEIPASS
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        data_path = os.path.join(base_path, "data", "allerts.chairRorist")
     else:
         # Skrypt uruchomiony z software/src/, dane są w ../../data/
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -23,9 +25,9 @@ def get_allerts_file_path():
 
 def get_sound_file_path():
     if getattr(sys, "frozen", False):
-        # EXE uruchomiony z dist/, dane są w ../data/
-        base_path = os.path.dirname(sys.executable)
-        data_path = os.path.join(base_path, "..", "data", "sound.wav")
+        # EXE uruchomiony, dane są w _MEIPASS
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        data_path = os.path.join(base_path, "data", "sound.wav")
     else:
         # Skrypt uruchomiony z software/src/, dane są w ../../data/
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -37,10 +39,8 @@ def get_sound_file_path():
 def get_data_file_path():
 
     if getattr(sys, "frozen", False):  # .exe
-        base_path = os.path.dirname(sys.executable)
-        return os.path.abspath(
-            os.path.join(base_path, "..", "data", "data.chairRorist")
-        )
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        return os.path.abspath(os.path.join(base_path, "data", "data.chairRorist"))
     else:  # .py
         base_path = os.path.dirname(os.path.abspath(__file__))
         return os.path.abspath(
@@ -48,11 +48,24 @@ def get_data_file_path():
         )
 
 
+def get_image_path(image_name):
+    if getattr(sys, "frozen", False):
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        return os.path.join(base_path, "images", image_name)
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base_path, "..", "..", "images", image_name)
+
+
 def save_data(int1, int2):
+    import tempfile
+
     path = get_data_file_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "wb") as f:
+    with tempfile.NamedTemporaryFile(dir=os.path.dirname(path), delete=False) as f:
         f.write(struct.pack("ii", int1, int2))
+        temp_path = f.name
+    os.replace(temp_path, path)
 
 
 def randomAllertLine(filename=get_allerts_file_path()):
@@ -71,7 +84,7 @@ def randomAllertLine(filename=get_allerts_file_path()):
                     return line.strip()
 
     except FileNotFoundError:
-        return "Canot find file"
+        return "Cannot find file"
 
 
 def sendWarning():
@@ -81,18 +94,24 @@ def sendWarning():
         notify(
             randomAllertLine(), f"Sitting time {status.get_sitting_time_formatted()}"
         )
-    if status.get_sitting_time() > 5400:
+    if status.get_sitting_time() > status.get_alert_interval() * 1.1:
         current = status.get_ignored_notifications()
         status.set_ignored_notifications(current + 1)
         save_data(current + 1, status.get_realised_notifications())
 
 
 def notify(title: str, message: str, icon_path: str = "images/Exploding.ico"):
+    if not icon_path.startswith("images/"):
+        icon_full_path = icon_path
+    else:
+        icon_name = icon_path.split("/", 1)[1] if "/" in icon_path else icon_path
+        icon_full_path = get_image_path(icon_name)
+
     toast = Notification(
         app_id="ChairRorist_v0.2",
         title=title,
         msg=message,
-        icon=os.path.abspath(icon_path),
+        icon=icon_full_path,
     )
 
     if icon_path == "images/Exploding.ico":
@@ -105,7 +124,7 @@ def notify(title: str, message: str, icon_path: str = "images/Exploding.ico"):
         winsound.PlaySound(get_sound_file_path(), winsound.SND_FILENAME)
 
     except Exception as e:
-        print(f"Error playing sound: {e}")
+        logger.logger.warning(f"Error playing sound: {e}")
 
 
 def DEPRECATED_notify(

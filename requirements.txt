@@ -1,0 +1,7 @@
+keyboard==0.13.5
+pillow==10.2.0
+plyer==2.1.0
+pyserial==3.5
+pystray==0.19.5
+winotify==1.1.0
+pytest==7.4.3

@@ -1,5 +1,5 @@
-def format_time(sitting_time):
-    """Formating time into h/m/s"""
+def format_time(sitting_time: int) -> str:
+    """Format time into h/m/s"""
     hours, remainder = divmod(sitting_time, 3600)
     minutes, seconds = divmod(remainder, 60)
 
