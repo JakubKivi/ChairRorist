@@ -1,10 +1,10 @@
-# ChairRorist
-
-<img align="left" width="400" height="400" src="images/ChairRoristHardware.webp">
+<img src="images/ChairRoristHardware.webp" align="left" width="300" height="300" hspace="20" alt="ChairRorist Hardware">
 
 This is a simple Python app that connects to an Arduino with a distance sensor to track if your height-adjustable desk is up or down. It sits quietly in the system tray and reminds you to stand every hour.
 
 More info [here](https://jakubkivi.github.io#portfolio-modal-ChairRorist)
+
+<br clear="all" />
 
 ## Features
 
