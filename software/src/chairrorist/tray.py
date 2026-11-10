@@ -1,5 +1,6 @@
 """System tray icon for ChairRorist."""
 import threading
+import time
 
 from PIL import Image
 from pystray import Icon, Menu, MenuItem
@@ -12,16 +13,29 @@ _MUTE_LABEL = "Mute"
 _UNMUTE_LABEL = "Unmute"
 _REFRESH_INTERVAL = 1.0  # seconds
 _RECONNECT_WAIT = 2.0  # seconds
+_MENU_REFRESH_INTERVAL = 5.0  # seconds
 
 
 class TrayController:
     """Owns the system-tray icon and keeps its appearance in sync with state."""
 
-    def __init__(self, status, on_reset, on_show_warning, on_exit):
+    def __init__(
+        self,
+        status,
+        on_reset,
+        on_show_warning,
+        on_exit,
+        on_select_port=None,
+        available_ports=None,
+        current_port=None,
+    ):
         self._status = status
         self._on_reset = on_reset
         self._on_show_warning = on_show_warning
         self._on_exit = on_exit
+        self._on_select_port = on_select_port
+        self._available_ports = available_ports or (lambda: [])
+        self._current_port = current_port or (lambda: None)
 
         self._icon = None
         self._stop_event = threading.Event()
@@ -39,15 +53,54 @@ class TrayController:
         self._icon.run()
 
     def _build_menu(self) -> Menu:
-        return Menu(
+        items = [
             MenuItem(self._ignored_text, None, enabled=False),
             MenuItem(self._respected_text, None, enabled=False),
             Menu.SEPARATOR,
-            MenuItem(self._mute_text, self._toggle_mute),
-            MenuItem("Show Warning", self._show_warning),
-            MenuItem("Reset", self._reset),
-            MenuItem("Exit", self._exit),
+        ]
+
+        if self._on_select_port is not None:
+            items.append(self._port_menu())
+            items.append(Menu.SEPARATOR)
+
+        items.extend(
+            [
+                MenuItem(self._mute_text, self._toggle_mute),
+                MenuItem("Show Warning", self._show_warning),
+                MenuItem("Reset", self._reset),
+                MenuItem("Exit", self._exit),
+            ]
         )
+        return Menu(*items)
+
+    # ---- port submenu ---------------------------------------------------
+    def _port_menu(self) -> MenuItem:
+        current = self._current_port()
+        try:
+            available = self._available_ports()
+        except Exception as exc:
+            logger.warning("Could not enumerate serial ports: %s", exc)
+            available = []
+
+        ports = sorted(set(available) | ({current} if current else set()))
+
+        if not ports:
+            return MenuItem(
+                "Port", Menu(MenuItem("No ports found", None, enabled=False))
+            )
+
+        return MenuItem(
+            "Port", Menu(*[self._make_port_item(port) for port in ports])
+        )
+
+    def _make_port_item(self, port):
+        def action(icon, item):
+            self._on_select_port(port)
+
+        def checked(item):
+            return port == self._current_port()
+
+        return MenuItem(port, action, checked=checked, radio=True)
 
     # ---- menu text (dynamic) -------------------------------------------
     def _ignored_text(self, item) -> str:
@@ -77,6 +130,7 @@ class TrayController:
 
     # ---- refresh loop ---------------------------------------------------
     def _update_loop(self) -> None:
+        last_menu_refresh = 0.0
         while not self._stop_event.is_set():
             if not self._status.connected:
                 self._stop_event.wait(_RECONNECT_WAIT)
@@ -84,6 +138,12 @@ class TrayController:
 
             self._update_icon()
             self._update_title()
+
+            now = time.monotonic()
+            if now - last_menu_refresh >= _MENU_REFRESH_INTERVAL:
+                self._icon.menu = self._build_menu()
+                last_menu_refresh = now
+
             self._icon.update_menu()
             self._stop_event.wait(_REFRESH_INTERVAL)
 

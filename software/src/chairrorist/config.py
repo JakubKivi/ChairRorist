@@ -4,7 +4,9 @@ import json
 import os
 from typing import Any, Dict, Optional
 
-from . import paths
+from . import logging_setup, paths
+
+logger = logging_setup.get_logger()
 
 
 class Config:
@@ -16,7 +18,6 @@ class Config:
 
     DEFAULT_CONFIG: Dict[str, Any] = {
         "serial": {
-            "port": "COM3",
             "baudrate": 9600,
             "timeout": 1,
         },
@@ -46,8 +47,8 @@ class Config:
                     user_config = json.load(handle)
                 self._deep_update(config, user_config)
             except (json.JSONDecodeError, OSError) as exc:
-                print(f"Warning: Could not load config file {self.config_file}: {exc}")
-                print("Using default configuration.")
+                logger.warning("Could not load config file %s: %s", self.config_file, exc)
+                logger.warning("Using default configuration.")
 
         return config
 
@@ -60,7 +61,7 @@ class Config:
                 base[key] = value
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Return a value addressed with dot notation (``serial.port``)."""
+        """Return a value addressed with dot notation (``serial.baudrate``)."""
         node: Any = self._config
         for part in key.split("."):
             if not isinstance(node, dict) or part not in node:

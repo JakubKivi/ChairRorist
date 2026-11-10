@@ -42,3 +42,10 @@ class SensorReader:
     def close(self) -> None:
         if self._serial is not None:
             self._serial.close()
+
+
+def list_available_ports() -> list:
+    """Return the device names of the currently available serial ports."""
+    from serial.tools import list_ports as serial_list_ports
+
+    return [info.device for info in serial_list_ports.comports()]

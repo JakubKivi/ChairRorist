@@ -41,10 +41,13 @@ def setup_logging(level: int = logging.INFO) -> logging.Logger:
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    # In a windowed (console=False) PyInstaller build sys.stdout is None;
+    # skip the console handler in that case and rely on the file handler.
+    if sys.stdout is not None:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(level)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
     try:
         log_file = _log_file_path()

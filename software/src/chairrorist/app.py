@@ -14,12 +14,14 @@ from . import hotkeys
 from . import logging_setup
 from . import notifications
 from . import serial_monitor
+from . import settings
 from . import status as status_module
 from . import tray as tray_module
 
 logger = logging_setup.get_logger()
 
 _RECONNECT_BACKOFF = 3.0  # seconds
+_DEFAULT_PORT = "COM3"
 
 
 class ChairRoristApp:
@@ -36,12 +38,21 @@ class ChairRoristApp:
         self.tray = None
         self.shutdown_event = threading.Event()
 
+        self._lock = threading.Lock()
+        self._current_port = None
+        self._pending_port = None
+        self._port_change_event = threading.Event()
+
     # ---- lifecycle ------------------------------------------------------
     def run(self) -> int:
         logging_setup.setup_logging()
         self._load_statistics()
 
-        if not self._connect_serial():
+        port = self._resolve_port()
+        if not self._connect_serial(port):
+            notifications.notify(
+                "Error", f"Failed to connect to sensor on {port}."
+            )
             return 1
 
         try:
@@ -53,20 +64,28 @@ class ChairRoristApp:
         return 0
 
     # ---- wiring ---------------------------------------------------------
-    def _connect_serial(self) -> bool:
-        port = self.config.get("serial.port", "COM3")
+    def _resolve_port(self) -> str:
+        """Return the active port: app-data setting, else the default."""
+        return settings.get_port() or _DEFAULT_PORT
+
+    def _connect_serial(self, port: str) -> bool:
         baudrate = self.config.get("serial.baudrate", 9600)
         timeout = self.config.get("serial.timeout", 1)
+
+        self._close_serial()
 
         try:
             self.serial_port = serial.Serial(port, baudrate, timeout=timeout)
         except Exception as exc:
             logger.error("Failed to connect to %s: %s", port, exc)
-            notifications.notify("Error", f"Failed to connect to sensor on {port}.")
+            self.serial_port = None
+            self.reader = None
             return False
 
         logger.info("Connected to serial port %s at %s baud", port, baudrate)
         self.reader = serial_monitor.SensorReader(self.serial_port)
+        with self._lock:
+            self._current_port = port
         return True
 
     def _close_serial(self) -> None:
@@ -75,7 +94,8 @@ class ChairRoristApp:
                 self.serial_port.close()
             except Exception:
                 pass
-            self.serial_port = None
+        self.serial_port = None
+        self.reader = None
 
     def _load_statistics(self) -> None:
         ignored, realised = notifications.load_data()
@@ -88,6 +108,9 @@ class ChairRoristApp:
             on_reset=self._reset_timer,
             on_show_warning=self._show_warning,
             on_exit=self._exit,
+            on_select_port=self.select_port,
+            available_ports=self._list_ports,
+            current_port=self._get_current_port,
         )
         threading.Thread(target=self.tray.run, name="tray", daemon=True).start()
 
@@ -112,9 +135,50 @@ class ChairRoristApp:
     def _exit(self) -> None:
         self.shutdown_event.set()
 
+    def _get_current_port(self):
+        with self._lock:
+            return self._current_port
+
+    def _list_ports(self):
+        return serial_monitor.list_available_ports()
+
+    def select_port(self, port: str) -> None:
+        """Persist the selected port and ask the main loop to reconnect."""
+        if port == self._get_current_port():
+            return
+        settings.set_port(port)
+        with self._lock:
+            self._pending_port = port
+        self._port_change_event.set()
+
+    def _apply_port_change(self) -> None:
+        with self._lock:
+            new_port = self._pending_port
+            self._pending_port = None
+        self._port_change_event.clear()
+
+        if not new_port or new_port == self._get_current_port():
+            return
+
+        logger.info("Switching serial port to %s", new_port)
+        self.status.set_connected(False)
+        if not self._connect_serial(new_port):
+            notifications.notify(
+                "Error", f"Failed to connect to sensor on {new_port}."
+            )
+
     # ---- main loop ------------------------------------------------------
     def _sensor_loop(self) -> None:
         while not self.shutdown_event.is_set():
+            if self._port_change_event.is_set():
+                self._apply_port_change()
+                continue
+
+            if self.reader is None:
+                self.status.set_connected(False)
+                self._backoff_sleep()
+                continue
+
             try:
                 state = self.reader.read_state()
             except ValueError as exc:

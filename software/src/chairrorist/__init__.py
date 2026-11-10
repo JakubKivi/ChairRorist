@@ -4,6 +4,7 @@ The package is organised around small, single-responsibility modules:
 
 - :mod:`chairrorist.config` — configuration loading (JSON with defaults)
 - :mod:`chairrorist.paths` — filesystem path resolution (source vs. bundled)
+- :mod:`chairrorist.settings` — persistent app-data settings (serial port)
 - :mod:`chairrorist.status` — thread-safe application state
 - :mod:`chairrorist.utils` — pure helper functions
 - :mod:`chairrorist.logging_setup` — logging bootstrap

@@ -12,6 +12,7 @@ More info [here](https://jakubkivi.github.io#portfolio-modal-ChairRorist)
 - System tray integration with status indicators
 - Configurable alert intervals and polling rates
 - Hotkey support for timer reset
+- In-tray serial port selection (persisted to app data)
 - Persistent statistics tracking
 - Windows notifications with custom alerts
 - Comprehensive logging
@@ -40,12 +41,12 @@ More info [here](https://jakubkivi.github.io#portfolio-modal-ChairRorist)
 
 ## Configuration
 
-The application can be configured via `config.json`:
+The application can be configured via `config.json` (bundled read-only inside
+the executable):
 
 ```json
 {
   "serial": {
-    "port": "COM3",
     "baudrate": 9600,
     "timeout": 1
   },
@@ -58,6 +59,10 @@ The application can be configured via `config.json`:
   }
 }
 ```
+
+The serial port is not part of `config.json`. It is selected from the tray
+icon menu and persisted to the application-data directory (next to the
+statistics file), independently of the build.
 
 ## Usage
 

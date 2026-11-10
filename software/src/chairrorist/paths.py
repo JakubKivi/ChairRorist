@@ -45,11 +45,7 @@ def app_data_path(*parts: str) -> str:
 
 
 def config_file_path() -> str:
-    """Return the location of the user-editable ``config.json``."""
-    if is_frozen():
-        return os.path.abspath(
-            os.path.join(os.path.dirname(sys.executable), "config.json")
-        )
+    """Return the location of the bundled, read-only ``config.json``."""
     return resource_path("config.json")
 
 

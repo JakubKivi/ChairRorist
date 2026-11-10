@@ -2,6 +2,7 @@
 
 import pytest
 
+from chairrorist import serial_monitor
 from chairrorist.serial_monitor import SensorReader
 
 
@@ -59,3 +60,16 @@ def test_close():
     reader = SensorReader(fake)
     reader.close()
     assert fake.closed is True
+
+
+class FakePortInfo:
+    def __init__(self, device):
+        self.device = device
+
+
+def test_list_available_ports(monkeypatch):
+    monkeypatch.setattr(
+        "serial.tools.list_ports.comports",
+        lambda: [FakePortInfo("COM3"), FakePortInfo("COM6")],
+    )
+    assert serial_monitor.list_available_ports() == ["COM3", "COM6"]
