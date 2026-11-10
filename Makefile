@@ -1,5 +1,5 @@
 # Ścieżka do pliku main.py
-SRC = .\software\src\ChairRorist.py
+SRC = .\software\src\main.py
 
 # Ścieżka do ikony
 ICON = .\images\sitting.ico
@@ -12,7 +12,7 @@ build:
 
 # Uruchom testy
 test:
-	python -m pytest tests/ -v
+	py -m pytest tests/ -v
 
 # Zainstaluj zależności
 install:

@@ -64,3 +64,18 @@ The application can be configured via `config.json`:
 1. Upload the Arduino sketch from `hardware/ChairRorist/` to your Arduino
 2. Run the application
 3. The app will appear in your system tray
+
+## Development
+
+The source lives in `software/src/` as the `chairrorist` package:
+
+- Entry point: `software/src/main.py` (also runnable as `python -m chairrorist`)
+- `chairrorist/app.py` — composition root (wires serial, state, tray, hotkeys)
+- `chairrorist/config.py`, `chairrorist/status.py`, `chairrorist/paths.py`, `chairrorist/utils.py` — pure, unit-tested logic
+- `chairrorist/notifications.py`, `chairrorist/tray.py`, `chairrorist/hotkeys.py`, `chairrorist/serial_monitor.py` — platform/IO adapters
+
+Run the tests:
+
+```bash
+py -m pytest tests/ -v
+```
