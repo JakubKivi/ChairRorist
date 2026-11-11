@@ -33,20 +33,30 @@ def resource_path(*parts: str) -> str:
 
 
 def app_data_path(*parts: str) -> str:
-    """Return an absolute path to a user-writable data location."""
+    """Return a user-writable data path, kept separate for dev vs. build.
+
+    The packaged executable persists to the user's app-data directory, while
+    running from source persists under ``data/dev/`` so that development
+    testing never touches real production statistics or settings.
+    """
     if is_frozen():
         base = os.path.join(
             os.environ.get("APPDATA", os.path.expanduser("~")), APP_NAME
         )
     else:
-        # Keep development data inside the repository's data/ directory.
-        base = resource_path("data")
+        base = resource_path("data", "dev")
     return os.path.abspath(os.path.join(base, *parts))
 
 
 def config_file_path() -> str:
-    """Return the location of the bundled, read-only ``config.json``."""
-    return resource_path("config.json")
+    """Return the location of the read-only config for the current mode.
+
+    The packaged executable always uses ``config.production.json`` (a fixed
+    60-minute alert interval), while running from source uses ``config.json``
+    so the alert/polling intervals can be tuned for testing.
+    """
+    name = "config.production.json" if is_frozen() else "config.json"
+    return resource_path(name)
 
 
 # Convenience accessors for the well-known assets.

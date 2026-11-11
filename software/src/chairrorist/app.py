@@ -5,16 +5,12 @@ control loop.  It is deliberately thin: each concern lives in its own module
 and is injected into the components that need it.
 """
 import threading
-import time
+import webbrowser
 
 import serial
 
 from . import config as config_module
-from . import hotkeys
-from . import logging_setup
-from . import notifications
-from . import serial_monitor
-from . import settings
+from . import hotkeys, logging_setup, notifications, serial_monitor, settings
 from . import status as status_module
 from . import tray as tray_module
 
@@ -22,6 +18,7 @@ logger = logging_setup.get_logger()
 
 _RECONNECT_BACKOFF = 3.0  # seconds
 _DEFAULT_PORT = "COM3"
+ABOUT_URL = "https://jakubkivi.github.io/#portfolio-modal-ChairRorist"
 
 
 class ChairRoristApp:
@@ -50,10 +47,11 @@ class ChairRoristApp:
 
         port = self._resolve_port()
         if not self._connect_serial(port):
+            # Stay alive so the user can pick the right port from the tray.
             notifications.notify(
-                "Error", f"Failed to connect to sensor on {port}."
+                "Error",
+                f"Failed to connect to sensor on {port}. Pick a port from the tray menu.",
             )
-            return 1
 
         try:
             self._start_ui()
@@ -76,7 +74,7 @@ class ChairRoristApp:
 
         try:
             self.serial_port = serial.Serial(port, baudrate, timeout=timeout)
-        except Exception as exc:
+        except (serial.SerialException, OSError, ValueError) as exc:
             logger.error("Failed to connect to %s: %s", port, exc)
             self.serial_port = None
             self.reader = None
@@ -92,8 +90,8 @@ class ChairRoristApp:
         if self.serial_port is not None:
             try:
                 self.serial_port.close()
-            except Exception:
-                pass
+            except (serial.SerialException, OSError) as exc:
+                logger.debug("Error closing serial port: %s", exc)
         self.serial_port = None
         self.reader = None
 
@@ -108,6 +106,7 @@ class ChairRoristApp:
             on_reset=self._reset_timer,
             on_show_warning=self._show_warning,
             on_exit=self._exit,
+            on_about=self._show_about,
             on_select_port=self.select_port,
             available_ports=self._list_ports,
             current_port=self._get_current_port,
@@ -131,6 +130,9 @@ class ChairRoristApp:
 
     def _show_warning(self) -> None:
         notifications.send_warning(self.status)
+
+    def _show_about(self) -> None:
+        webbrowser.open(ABOUT_URL)
 
     def _exit(self) -> None:
         self.shutdown_event.set()
@@ -186,7 +188,7 @@ class ChairRoristApp:
                 self.status.set_connected(False)
                 self._backoff_sleep()
                 continue
-            except Exception as exc:
+            except (serial.SerialException, OSError) as exc:
                 logger.error("Error in main loop: %s", exc)
                 self.status.set_connected(False)
                 self._backoff_sleep()
@@ -201,10 +203,14 @@ class ChairRoristApp:
             self.status.set_connected(True)
 
             if state == 0:  # sitting
-                self.status.increment_sitting_time()
-                if self.status.is_alert_due():
+                if self.status.increment_sitting_time():
+                    notifications.save_data(
+                        self.status.ignored_notifications,
+                        self.status.realised_notifications,
+                    )
+                if self.status.should_alert():
                     notifications.send_warning(self.status)
-                    self.status.set_last_alert_time(time.time())
+                    self.status.mark_alerted()
             else:  # standing
                 if self.status.mark_standing():
                     notifications.save_data(

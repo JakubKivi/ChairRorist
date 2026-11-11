@@ -2,7 +2,7 @@
 import copy
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar
 
 from . import logging_setup, paths
 
@@ -16,7 +16,7 @@ class Config:
     ``config.json`` only overrides the keys it specifies.
     """
 
-    DEFAULT_CONFIG: Dict[str, Any] = {
+    DEFAULT_CONFIG: ClassVar[dict[str, Any]] = {
         "serial": {
             "baudrate": 9600,
             "timeout": 1,
@@ -30,13 +30,13 @@ class Config:
         },
     }
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: str | None = None):
         self.config_file = (
             os.path.abspath(config_file) if config_file else paths.config_file_path()
         )
         self._config = self._load_config()
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         # deepcopy: a shallow copy would share nested dicts with DEFAULT_CONFIG
         # and let a user config silently mutate the class-level defaults.
         config = copy.deepcopy(self.DEFAULT_CONFIG)
@@ -53,7 +53,7 @@ class Config:
         return config
 
     @staticmethod
-    def _deep_update(base: Dict[str, Any], update: Dict[str, Any]) -> None:
+    def _deep_update(base: dict[str, Any], update: dict[str, Any]) -> None:
         for key, value in update.items():
             if isinstance(value, dict) and isinstance(base.get(key), dict):
                 Config._deep_update(base[key], value)
@@ -84,6 +84,6 @@ class Config:
             json.dump(self._config, handle, indent=2)
 
 
-def load_config(config_file: Optional[str] = None) -> Config:
+def load_config(config_file: str | None = None) -> Config:
     """Create a :class:`Config` using *config_file* or the default location."""
     return Config(config_file)

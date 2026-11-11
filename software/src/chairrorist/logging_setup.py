@@ -56,7 +56,7 @@ def setup_logging(level: int = logging.INFO) -> logging.Logger:
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    except (OSError, IOError) as exc:
+    except OSError as exc:
         logger.warning("Could not set up file logging: %s", exc)
 
     return logger

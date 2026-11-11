@@ -12,8 +12,8 @@ logger = logging_setup.get_logger()
 _MUTE_LABEL = "Mute"
 _UNMUTE_LABEL = "Unmute"
 _REFRESH_INTERVAL = 1.0  # seconds
-_RECONNECT_WAIT = 2.0  # seconds
 _MENU_REFRESH_INTERVAL = 5.0  # seconds
+_DISCONNECTED_TITLE = "Disconnected - select port"
 
 
 class TrayController:
@@ -25,6 +25,7 @@ class TrayController:
         on_reset,
         on_show_warning,
         on_exit,
+        on_about=None,
         on_select_port=None,
         available_ports=None,
         current_port=None,
@@ -33,8 +34,9 @@ class TrayController:
         self._on_reset = on_reset
         self._on_show_warning = on_show_warning
         self._on_exit = on_exit
+        self._on_about = on_about
         self._on_select_port = on_select_port
-        self._available_ports = available_ports or (lambda: [])
+        self._available_ports = available_ports or (list)
         self._current_port = current_port or (lambda: None)
 
         self._icon = None
@@ -63,14 +65,15 @@ class TrayController:
             items.append(self._port_menu())
             items.append(Menu.SEPARATOR)
 
-        items.extend(
-            [
-                MenuItem(self._mute_text, self._toggle_mute),
-                MenuItem("Show Warning", self._show_warning),
-                MenuItem("Reset", self._reset),
-                MenuItem("Exit", self._exit),
-            ]
-        )
+        if self._on_about is not None:
+            items.append(MenuItem("About", self._about))
+
+        items.append(MenuItem(self._mute_text, self._toggle_mute))
+        if not paths.is_frozen():  # "Show Warning" is a development/testing helper
+            items.append(MenuItem("Show Warning", self._show_warning))
+        items.append(MenuItem("Reset", self._reset))
+        items.append(MenuItem("Exit", self._exit))
+
         return Menu(*items)
 
     # ---- port submenu ---------------------------------------------------
@@ -78,7 +81,7 @@ class TrayController:
         current = self._current_port()
         try:
             available = self._available_ports()
-        except Exception as exc:
+        except (OSError, ImportError) as exc:
             logger.warning("Could not enumerate serial ports: %s", exc)
             available = []
 
@@ -116,6 +119,9 @@ class TrayController:
     def _toggle_mute(self, icon, item) -> None:
         self._status.set_muted(not self._status.muted)
 
+    def _about(self, icon, item) -> None:
+        self._on_about()
+
     def _show_warning(self, icon, item) -> None:
         self._on_show_warning()
 
@@ -132,12 +138,11 @@ class TrayController:
     def _update_loop(self) -> None:
         last_menu_refresh = 0.0
         while not self._stop_event.is_set():
-            if not self._status.connected:
-                self._stop_event.wait(_RECONNECT_WAIT)
-                continue
-
-            self._update_icon()
-            self._update_title()
+            if self._status.connected:
+                self._update_icon()
+                self._update_title()
+            else:
+                self._icon.title = _DISCONNECTED_TITLE
 
             now = time.monotonic()
             if now - last_menu_refresh >= _MENU_REFRESH_INTERVAL:
@@ -151,7 +156,7 @@ class TrayController:
         name = utils.icon_name(self._status.sitting_time, self._status.alert_interval)
         try:
             self._icon.icon = Image.open(paths.get_image_path(name))
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             logger.error("Failed to load icon %s: %s", name, exc)
 
     def _update_title(self) -> None:

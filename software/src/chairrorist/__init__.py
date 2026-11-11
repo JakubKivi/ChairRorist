@@ -15,5 +15,5 @@ The package is organised around small, single-responsibility modules:
 - :mod:`chairrorist.app` — composition root / orchestration
 """
 
-__version__ = "1.2.0"
+__version__ = "1.0.0"
 __all__ = ["__version__"]

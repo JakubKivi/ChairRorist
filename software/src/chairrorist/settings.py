@@ -7,7 +7,6 @@ bundled ``config.json``, so they survive independently of the build.
 import json
 import os
 import tempfile
-from typing import Dict, Optional
 
 from . import paths
 
@@ -20,7 +19,7 @@ def settings_path() -> str:
     return paths.app_data_path(_SETTINGS_FILE)
 
 
-def load_settings() -> Dict:
+def load_settings() -> dict:
     """Return the persisted settings (empty dict when absent/invalid)."""
     try:
         with open(settings_path(), "r", encoding="utf-8") as handle:
@@ -30,7 +29,7 @@ def load_settings() -> Dict:
     return data if isinstance(data, dict) else {}
 
 
-def save_settings(settings: Dict) -> None:
+def save_settings(settings: dict) -> None:
     """Atomically persist the settings dictionary."""
     path = settings_path()
     directory = os.path.dirname(path)
@@ -46,7 +45,7 @@ def save_settings(settings: Dict) -> None:
             os.remove(temp_path)
 
 
-def get_port() -> Optional[str]:
+def get_port() -> str | None:
     """Return the user-selected serial port, if any."""
     port = load_settings().get(_PORT_KEY)
     return port if port else None

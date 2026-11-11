@@ -1,5 +1,4 @@
 """Serial sensor communication for ChairRorist."""
-from typing import Optional
 
 
 class SensorReader:
@@ -12,7 +11,7 @@ class SensorReader:
     def __init__(self, serial_port):
         self._serial = serial_port
 
-    def read_state(self) -> Optional[int]:
+    def read_state(self) -> int | None:
         """Query the sensor.
 
         Returns:

@@ -1,5 +1,5 @@
 """Global hotkey support (Windows)."""
-from typing import Callable
+from collections.abc import Callable
 
 import keyboard
 

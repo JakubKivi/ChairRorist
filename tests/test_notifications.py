@@ -69,9 +69,9 @@ def test_send_warning_notifies_when_not_muted(monkeypatch):
     assert calls == [("test line", "Sitting time 0s")]
 
 
-def test_send_warning_increments_ignored(monkeypatch):
+def test_send_warning_does_not_modify_statistics(monkeypatch):
     st = status.StatusManager(alert_interval=3600)
-    st.set_sitting_time(4000)  # > 3600 * 1.1
+    st.set_sitting_time(4000)  # > 3600 * 1.1, but send_warning must not count it
     saved = []
     monkeypatch.setattr(notifications, "get_random_alert_line", lambda: "test line")
     monkeypatch.setattr(notifications, "notify", lambda *a, **k: None)
@@ -79,5 +79,7 @@ def test_send_warning_increments_ignored(monkeypatch):
         notifications, "save_data", lambda i, r: saved.append((i, r))
     )
     notifications.send_warning(st)
-    assert st.ignored_notifications == 1
-    assert saved == [(1, 0)]
+    assert st.ignored_notifications == 0
+    assert saved == []
+
+

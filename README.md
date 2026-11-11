@@ -41,8 +41,12 @@ More info [here](https://jakubkivi.github.io#portfolio-modal-ChairRorist)
 
 ## Configuration
 
-The application can be configured via `config.json` (bundled read-only inside
-the executable):
+Configuration is split by environment:
+
+- `config.json` — used when running from source (`python main.py`); tune the
+  intervals here for testing.
+- `config.production.json` — bundled into the executable; the build always
+  uses a 60-minute alert interval.
 
 ```json
 {
@@ -51,7 +55,7 @@ the executable):
     "timeout": 1
   },
   "intervals": {
-    "polling": 5,
+    "polling": 60,
     "alert": 3600
   },
   "hotkeys": {
@@ -60,9 +64,10 @@ the executable):
 }
 ```
 
-The serial port is not part of `config.json`. It is selected from the tray
-icon menu and persisted to the application-data directory (next to the
-statistics file), independently of the build.
+The serial port is not part of the config — it is selected from the tray icon
+menu and persisted to the application-data directory. Statistics and the
+selected port are kept separate between development (`data/dev/`) and the
+packaged executable (`%APPDATA%/ChairRorist/`).
 
 ## Usage
 

@@ -4,8 +4,8 @@
     "timeout": 1
   },
   "intervals": {
-    "polling": 60,
-    "alert": 3600
+    "polling": 1,
+    "alert": 20
   },
   "hotkeys": {
     "reset_timer": "ctrl+shift+alt+d"

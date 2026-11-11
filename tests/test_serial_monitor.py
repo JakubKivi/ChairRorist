@@ -1,7 +1,6 @@
 """Tests for the serial sensor reader."""
 
 import pytest
-
 from chairrorist import serial_monitor
 from chairrorist.serial_monitor import SensorReader
 

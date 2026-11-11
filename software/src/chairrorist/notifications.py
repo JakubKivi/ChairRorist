@@ -3,9 +3,8 @@ import os
 import random
 import struct
 import tempfile
-from typing import Optional, Tuple, TYPE_CHECKING
-
 import winsound
+from typing import TYPE_CHECKING
 
 from . import logging_setup, paths
 
@@ -14,8 +13,10 @@ if TYPE_CHECKING:
 
 logger = logging_setup.get_logger()
 
+APP_ID = "ChairRorist"
 
-def get_random_alert_line(filename: Optional[str] = None) -> str:
+
+def get_random_alert_line(filename: str | None = None) -> str:
     """Return a random, non-empty line from the alerts file."""
     filename = filename or paths.get_alert_file_path()
     try:
@@ -45,7 +46,7 @@ def save_data(ignored: int, realised: int) -> None:
             os.remove(temp_path)
 
 
-def load_data() -> Tuple[int, int]:
+def load_data() -> tuple[int, int]:
     """Load persisted notification statistics (defaults to zero)."""
     path = paths.get_data_file_path()
     try:
@@ -69,7 +70,7 @@ def notify(title: str, message: str, icon_path: str = "images/Exploding.ico") ->
         icon_full_path = icon_path
 
     toast = Notification(
-        app_id="ChairRorist_v0.2",
+        app_id=APP_ID,
         title=title,
         msg=message,
         icon=icon_full_path,
@@ -83,18 +84,15 @@ def notify(title: str, message: str, icon_path: str = "images/Exploding.ico") ->
 
     try:
         winsound.PlaySound(paths.get_sound_file_path(), winsound.SND_FILENAME)
-    except Exception as exc:
+    except (RuntimeError, OSError) as exc:
         logger.warning("Error playing sound: %s", exc)
 
 
 def send_warning(status: "StatusManager") -> None:
-    """Send a standing reminder and update the ``ignored`` counter."""
+    """Send a standing reminder without modifying the statistics."""
     if not status.muted:
         notify(
             get_random_alert_line(),
             f"Sitting time {status.sitting_time_formatted}",
         )
 
-    if status.sitting_time > status.alert_interval * 1.1:
-        status.increment_ignored_notifications()
-        save_data(status.ignored_notifications, status.realised_notifications)
