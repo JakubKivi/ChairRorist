@@ -31,7 +31,7 @@ def test_connection_toggle():
 
 def test_increment_sitting_time():
     st = status.StatusManager(polling_interval=5)
-    assert st.increment_sitting_time() is False
+    st.increment_sitting_time()
     assert st.sitting_time == 5
     assert st.sitting_time_formatted == "5s"
     st.increment_sitting_time()
@@ -59,33 +59,37 @@ def test_should_alert_and_mark_alerted():
     assert st.should_alert() is True
 
 
-def test_ignored_counted_per_alert():
+def test_ignored_counted_when_next_alert_fires():
     st = status.StatusManager(polling_interval=1, alert_interval=20)
 
-    # First alert at 20s, ignored at 22s.
-    _sit(st, 22)
+    # The reminder at 20s is ignored when the next one fires at 40s.
+    _sit(st, 40)
     assert st.ignored_notifications == 1
+    assert st.realised_notifications == 0
 
-    # Second alert at 40s, ignored at 42s.
+    # The reminder at 40s is ignored when the next one fires at 60s.
     _sit(st, 20)
     assert st.ignored_notifications == 2
 
 
-def test_respected_counted_after_alert():
+def test_respected_counted_when_standing_before_next_alert():
     st = status.StatusManager(polling_interval=1, alert_interval=20)
-    _sit(st, 20)  # alert fired at 20s
-    _sit(st, 1)  # still within the 2s grace period
+    _sit(st, 20)  # reminder fires at 20s
+    _sit(st, 19)  # still sitting at 39s, just before the next reminder
     assert st.mark_standing() is True
     assert st.realised_notifications == 1
     assert st.ignored_notifications == 0
 
 
-def test_ignored_and_respected_are_mutually_exclusive():
+def test_ignored_reminder_is_not_retroactively_respected():
     st = status.StatusManager(polling_interval=1, alert_interval=20)
-    _sit(st, 22)  # ignored at 22s
+    _sit(st, 40)  # reminder at 20s ignored at 40s; reminder at 40s now pending
     assert st.ignored_notifications == 1
-    assert st.mark_standing() is False  # ignored -> not respected
-    assert st.realised_notifications == 0
+
+    # Standing now respects the 40s reminder, not the ignored 20s one.
+    assert st.mark_standing() is True
+    assert st.realised_notifications == 1
+    assert st.ignored_notifications == 1
 
 
 def test_standing_without_alert_not_counted():
@@ -99,22 +103,22 @@ def test_standing_without_alert_not_counted():
 def test_multiple_sessions():
     st = status.StatusManager(polling_interval=1, alert_interval=20)
 
-    # Session 1: ignore the reminder.
-    _sit(st, 25)
+    # Session 1: ignore the reminder, then stand (respecting the next one).
+    _sit(st, 40)
     assert st.ignored_notifications == 1
-    assert st.mark_standing() is False
+    assert st.mark_standing() is True
+    assert st.realised_notifications == 1
 
     # Session 2: respect the reminder.
     _sit(st, 21)
     assert st.mark_standing() is True
-    assert st.realised_notifications == 1
+    assert st.realised_notifications == 2
     assert st.ignored_notifications == 1
 
 
 def test_reset_timer():
     st = status.StatusManager(polling_interval=1, alert_interval=20)
-    _sit(st, 25)  # alert + ignored
-    assert st.ignored_notifications == 1
+    _sit(st, 25)  # reminder fired at 20s, still pending
     st.reset_timer()
     assert st.sitting_time == 0
     assert st.sitting_time_formatted == "0s"

@@ -8,15 +8,14 @@ inconsistent snapshot of the state.
 Sitting time is a single counter incremented by the polling interval on each
 "sitting" sensor reading — never wall-clock time.  Every ``alert_interval`` of
 sitting fires a reminder; that reminder is then resolved as "respected" if the
-user stands up within a short grace period, or "ignored" if they keep sitting
-past it.  Each reminder is tracked independently, so ignoring several
-reminders in a row increments the ignored counter once per reminder.
+user stands up before the next reminder, or "ignored" if they are still sitting
+when the next reminder fires.  Each reminder is tracked independently, so
+ignoring several reminders in a row increments the ignored counter once per
+reminder.
 """
 import threading
 
 from . import utils
-
-_GRACE_FACTOR = 0.1  # fraction of the alert interval allowed to stand after a reminder
 
 
 class StatusManager:
@@ -101,42 +100,40 @@ class StatusManager:
             self._muted = value
 
     # ---- behaviour ------------------------------------------------------
-    def increment_sitting_time(self) -> bool:
-        """Add one polling interval of sitting time.
-
-        Returns True when the latest reminder was just "ignored" (the user
-        kept sitting past the grace period), so the caller can persist it.
-        """
+    def increment_sitting_time(self) -> None:
+        """Add one polling interval of sitting time."""
         with self._lock:
             self._sitting_time += self._polling_interval
             self._sitting_time_formatted = utils.format_time(int(self._sitting_time))
-
-            if self._alert_pending and self._sitting_time >= self._ignored_threshold():
-                self._alert_pending = False
-                self._ignored_notifications += 1
-                return True
-            return False
-
-    def _ignored_threshold(self) -> float:
-        """Sitting-time level past which a pending reminder counts as ignored."""
-        return self._alerted_up_to + self._alert_interval * _GRACE_FACTOR
 
     def should_alert(self) -> bool:
         """Return True when another full alert interval of sitting has elapsed."""
         with self._lock:
             return self._sitting_time - self._alerted_up_to >= self._alert_interval
 
-    def mark_alerted(self) -> None:
-        """Record that a reminder was shown for the current sitting level."""
+    def mark_alerted(self) -> bool:
+        """Record that a reminder was shown for the current sitting level.
+
+        Returns True when the previous reminder was just resolved as "ignored"
+        (the user kept sitting until this next reminder), so the caller can
+        persist it.
+        """
         with self._lock:
+            ignored = False
+            if self._alert_pending:
+                self._alert_pending = False
+                self._ignored_notifications += 1
+                ignored = True
+
             self._alerted_up_to += self._alert_interval
             self._alert_pending = True
+            return ignored
 
     def mark_standing(self) -> bool:
         """Record a transition to standing.
 
         Returns True when a ``respected`` notification was newly counted, i.e.
-        the user stood up within the grace period after a reminder.
+        the user stood up after a reminder and before the next reminder.
         """
         with self._lock:
             counted = False

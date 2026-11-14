@@ -203,14 +203,14 @@ class ChairRoristApp:
             self.status.set_connected(True)
 
             if state == 0:  # sitting
-                if self.status.increment_sitting_time():
-                    notifications.save_data(
-                        self.status.ignored_notifications,
-                        self.status.realised_notifications,
-                    )
+                self.status.increment_sitting_time()
                 if self.status.should_alert():
                     notifications.send_warning(self.status)
-                    self.status.mark_alerted()
+                    if self.status.mark_alerted():
+                        notifications.save_data(
+                            self.status.ignored_notifications,
+                            self.status.realised_notifications,
+                        )
             else:  # standing
                 if self.status.mark_standing():
                     notifications.save_data(
