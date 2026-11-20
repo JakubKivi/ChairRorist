@@ -12,8 +12,17 @@ user stands up before the next reminder, or "ignored" if they are still sitting
 when the next reminder fires.  Each reminder is tracked independently, so
 ignoring several reminders in a row increments the ignored counter once per
 reminder.
+
+While the user is *away* (screen off, sleep/hibernate) nothing is counted.
+Becoming away behaves like standing up: the sitting timer is reset and a
+pending reminder is resolved as "respected".
+
+Work hours are an independent, wall-clock stopwatch the user starts and stops
+from the tray.
 """
 import threading
+import time
+from collections.abc import Callable
 
 from . import utils
 
@@ -21,10 +30,20 @@ from . import utils
 class StatusManager:
     """Holds the mutable runtime state of the application."""
 
-    def __init__(self, polling_interval: float = 5, alert_interval: float = 3600):
+    def __init__(
+        self,
+        polling_interval: float = 5,
+        alert_interval: float = 3600,
+        clock: Callable[[], float] = time.time,
+    ):
         self._lock = threading.RLock()
         self._polling_interval = polling_interval
         self._alert_interval = alert_interval
+        # Wall clock on purpose: work hours should keep running during sleep.
+        self._clock = clock
+
+        self._away = False
+        self._work_started_at: float | None = None
 
         self._connected = False
         self._sitting_time = 0
@@ -99,16 +118,67 @@ class StatusManager:
         with self._lock:
             self._muted = value
 
+    # ---- work hours -----------------------------------------------------
+    @property
+    def work_active(self) -> bool:
+        with self._lock:
+            return self._work_started_at is not None
+
+    def start_work(self) -> None:
+        """Start the work-hours stopwatch (no-op when already running)."""
+        with self._lock:
+            if self._work_started_at is None:
+                self._work_started_at = self._clock()
+
+    def stop_work(self) -> None:
+        with self._lock:
+            self._work_started_at = None
+
+    def work_elapsed(self) -> float:
+        """Seconds since work hours were started (0 when not running)."""
+        with self._lock:
+            if self._work_started_at is None:
+                return 0.0
+            return max(self._clock() - self._work_started_at, 0.0)
+
+    @property
+    def work_elapsed_formatted(self) -> str:
+        return utils.format_clock(self.work_elapsed())
+
+    # ---- away (screen off / sleep) -------------------------------------
+    @property
+    def away(self) -> bool:
+        with self._lock:
+            return self._away
+
+    def set_away(self, value: bool) -> bool:
+        """Mark the user as away from / back at the computer.
+
+        Becoming away resets the sitting timer exactly like standing up does.
+        Returns True when that resolved a pending reminder as "respected", so
+        the caller can persist the statistics.
+        """
+        with self._lock:
+            was_away = self._away
+            self._away = value
+            if value and not was_away:
+                return self.mark_standing()
+            return False
+
     # ---- behaviour ------------------------------------------------------
     def increment_sitting_time(self) -> None:
-        """Add one polling interval of sitting time."""
+        """Add one polling interval of sitting time (ignored while away)."""
         with self._lock:
+            if self._away:
+                return
             self._sitting_time += self._polling_interval
             self._sitting_time_formatted = utils.format_time(int(self._sitting_time))
 
     def should_alert(self) -> bool:
         """Return True when another full alert interval of sitting has elapsed."""
         with self._lock:
+            if self._away:
+                return False
             return self._sitting_time - self._alerted_up_to >= self._alert_interval
 
     def mark_alerted(self) -> bool:
@@ -119,6 +189,11 @@ class StatusManager:
         persist it.
         """
         with self._lock:
+            if self._away:
+                # The user left while the reminder was being shown; the timer
+                # was already reset, so there is nothing to record.
+                return False
+
             ignored = False
             if self._alert_pending:
                 self._alert_pending = False

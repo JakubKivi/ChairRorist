@@ -11,6 +11,8 @@ logger = logging_setup.get_logger()
 
 _MUTE_LABEL = "Mute"
 _UNMUTE_LABEL = "Unmute"
+_WORK_START_LABEL = "Work hours Start"
+_WORK_STOP_LABEL = "Work hours Stop"
 _REFRESH_INTERVAL = 1.0  # seconds
 _MENU_REFRESH_INTERVAL = 5.0  # seconds
 _DISCONNECTED_TITLE = "Disconnected - select port"
@@ -58,6 +60,14 @@ class TrayController:
         items = [
             MenuItem(self._ignored_text, None, enabled=False),
             MenuItem(self._respected_text, None, enabled=False),
+            Menu.SEPARATOR,
+            MenuItem(self._work_toggle_text, self._toggle_work),
+            MenuItem(
+                self._work_elapsed_text,
+                None,
+                enabled=False,
+                visible=self._work_elapsed_visible,
+            ),
             Menu.SEPARATOR,
         ]
 
@@ -115,9 +125,24 @@ class TrayController:
     def _mute_text(self, item) -> str:
         return _UNMUTE_LABEL if self._status.muted else _MUTE_LABEL
 
+    def _work_toggle_text(self, item) -> str:
+        return _WORK_STOP_LABEL if self._status.work_active else _WORK_START_LABEL
+
+    def _work_elapsed_text(self, item) -> str:
+        return self._status.work_elapsed_formatted
+
+    def _work_elapsed_visible(self, item) -> bool:
+        return self._status.work_active
+
     # ---- menu actions ---------------------------------------------------
     def _toggle_mute(self, icon, item) -> None:
         self._status.set_muted(not self._status.muted)
+
+    def _toggle_work(self, icon, item) -> None:
+        if self._status.work_active:
+            self._status.stop_work()
+        else:
+            self._status.start_work()
 
     def _about(self, icon, item) -> None:
         self._on_about()

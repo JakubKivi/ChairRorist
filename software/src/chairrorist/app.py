@@ -10,7 +10,14 @@ import webbrowser
 import serial
 
 from . import config as config_module
-from . import hotkeys, logging_setup, notifications, serial_monitor, settings
+from . import (
+    hotkeys,
+    logging_setup,
+    notifications,
+    power_monitor,
+    serial_monitor,
+    settings,
+)
 from . import status as status_module
 from . import tray as tray_module
 
@@ -33,6 +40,7 @@ class ChairRoristApp:
         self.serial_port = None
         self.reader = None
         self.tray = None
+        self.power_monitor = None
         self.shutdown_event = threading.Event()
 
         self._lock = threading.Lock()
@@ -55,8 +63,11 @@ class ChairRoristApp:
 
         try:
             self._start_ui()
+            self._start_power_monitor()
             self._sensor_loop()
         finally:
+            if self.power_monitor is not None:
+                self.power_monitor.stop()
             self._close_serial()
 
         return 0
@@ -120,6 +131,23 @@ class ChairRoristApp:
             name="hotkey",
             daemon=True,
         ).start()
+
+    def _start_power_monitor(self) -> None:
+        self.power_monitor = power_monitor.PowerMonitor(self._on_away_changed)
+        self.power_monitor.start()
+
+    # ---- power events ---------------------------------------------------
+    def _on_away_changed(self, away: bool) -> None:
+        """Screen off / sleep / hibernate (away) or wake-up (back)."""
+        logger.info("User is now %s", "away" if away else "back")
+        if self.status.set_away(away):
+            self._save_statistics()
+
+    def _save_statistics(self) -> None:
+        notifications.save_data(
+            self.status.ignored_notifications,
+            self.status.realised_notifications,
+        )
 
     # ---- user actions ---------------------------------------------------
     def _reset_timer(self) -> None:
@@ -207,16 +235,10 @@ class ChairRoristApp:
                 if self.status.should_alert():
                     notifications.send_warning(self.status)
                     if self.status.mark_alerted():
-                        notifications.save_data(
-                            self.status.ignored_notifications,
-                            self.status.realised_notifications,
-                        )
+                        self._save_statistics()
             else:  # standing
                 if self.status.mark_standing():
-                    notifications.save_data(
-                        self.status.ignored_notifications,
-                        self.status.realised_notifications,
-                    )
+                    self._save_statistics()
 
             self.shutdown_event.wait(self.status.polling_interval)
 

@@ -34,3 +34,12 @@ def test_icon_name_sitting():
 def test_icon_name_exploding():
     assert utils.icon_name(3601, 3600) == "Exploding.ico"
 
+
+
+def test_format_clock():
+    assert utils.format_clock(0) == "0:00:00"
+    assert utils.format_clock(59) == "0:00:59"
+    assert utils.format_clock(61) == "0:01:01"
+    assert utils.format_clock(3600) == "1:00:00"
+    assert utils.format_clock(37230.7) == "10:20:30"
+    assert utils.format_clock(-5) == "0:00:00"

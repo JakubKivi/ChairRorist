@@ -13,6 +13,13 @@ def format_time(sitting_time: int) -> str:
     return f"{seconds}s"
 
 
+def format_clock(seconds: float) -> str:
+    """Format a number of seconds as a ``H:MM:SS`` stopwatch string."""
+    hours, remainder = divmod(max(int(seconds), 0), 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours}:{minutes:02d}:{secs:02d}"
+
+
 def icon_name(sitting_time: int, alert_interval: int) -> str:
     """Return the tray icon filename for the current sitting time."""
     if sitting_time <= 0:

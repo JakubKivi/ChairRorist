@@ -102,3 +102,64 @@ def test_show_about_opens_browser(monkeypatch, tmp_path):
     app._show_about()
     assert opened == [app_module.ABOUT_URL]
 
+
+
+def test_away_change_saves_when_reminder_respected(monkeypatch, tmp_path):
+    saved = []
+    monkeypatch.setattr(
+        app_module.notifications, "save_data", lambda i, r: saved.append((i, r))
+    )
+    app = app_module.ChairRoristApp(config=_make_config(tmp_path))
+    app.status._alert_pending = True  # a reminder fired and is unresolved
+
+    app._on_away_changed(True)
+
+    assert saved == [(0, 1)]
+    assert app.status.away is True
+
+
+def test_away_change_does_not_save_without_pending_reminder(monkeypatch, tmp_path):
+    saved = []
+    monkeypatch.setattr(
+        app_module.notifications, "save_data", lambda i, r: saved.append((i, r))
+    )
+    app = app_module.ChairRoristApp(config=_make_config(tmp_path))
+
+    app._on_away_changed(True)
+    app._on_away_changed(False)
+
+    assert saved == []
+    assert app.status.away is False
+
+
+def test_sensor_loop_counts_respected_and_ignored(monkeypatch, tmp_path):
+    """End to end: sit past one reminder, stand before the next -> respected."""
+    saved = []
+    monkeypatch.setattr(
+        app_module.notifications, "save_data", lambda i, r: saved.append((i, r))
+    )
+    monkeypatch.setattr(app_module.notifications, "send_warning", lambda s: None)
+    config = _make_config(tmp_path)
+    config.set("intervals.polling", 1)
+    config.set("intervals.alert", 20)
+    app = app_module.ChairRoristApp(config=config)
+    monkeypatch.setattr(app.shutdown_event, "wait", lambda timeout=None: None)
+
+    class Reader:
+        def __init__(self, states):
+            self.states = list(states)
+
+        def read_state(self):
+            if not self.states:
+                app.shutdown_event.set()
+                return 1
+            return self.states.pop(0)
+
+    # 25s sitting (reminder at 20s), then standing; then 45s sitting (the
+    # 20s reminder is ignored at 40s), then standing (respects the 40s one).
+    app.reader = Reader([0] * 25 + [1] + [0] * 45 + [1])
+    app._sensor_loop()
+
+    assert app.status.realised_notifications == 2
+    assert app.status.ignored_notifications == 1
+    assert saved[-1] == (1, 2)

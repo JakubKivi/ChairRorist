@@ -13,7 +13,9 @@ More info [here](https://jakubkivi.github.io#portfolio-modal-ChairRorist)
 - Configurable alert intervals and polling rates
 - Hotkey support for timer reset
 - In-tray serial port selection (persisted to app data)
-- Persistent statistics tracking
+- Persistent statistics tracking (ignored / respected reminders)
+- "Work hours Start/Stop" stopwatch in the tray menu
+- Screen off, sleep and hibernate reset the sitting timer
 - Windows notifications with custom alerts
 - Comprehensive logging
 
@@ -82,7 +84,7 @@ The source lives in `software/src/` as the `chairrorist` package:
 - Entry point: `software/src/main.py` (also runnable as `python -m chairrorist`)
 - `chairrorist/app.py` — composition root (wires serial, state, tray, hotkeys)
 - `chairrorist/config.py`, `chairrorist/status.py`, `chairrorist/paths.py`, `chairrorist/utils.py` — pure, unit-tested logic
-- `chairrorist/notifications.py`, `chairrorist/tray.py`, `chairrorist/hotkeys.py`, `chairrorist/serial_monitor.py` — platform/IO adapters
+- `chairrorist/notifications.py`, `chairrorist/tray.py`, `chairrorist/hotkeys.py`, `chairrorist/serial_monitor.py`, `chairrorist/power_monitor.py` — platform/IO adapters
 
 Run the tests:
 

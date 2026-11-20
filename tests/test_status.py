@@ -134,3 +134,119 @@ def test_mute_toggle():
     assert st.muted is True
 
 
+
+
+# ---- away (screen off / sleep) ---------------------------------------
+def test_away_resets_sitting_timer():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    _sit(st, 10)
+    assert st.set_away(True) is False  # no reminder was pending
+    assert st.away is True
+    assert st.sitting_time == 0
+    assert st.sitting_time_formatted == "0s"
+
+
+def test_away_counts_pending_reminder_as_respected():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    _sit(st, 25)  # reminder fired at 20s and is pending
+    assert st.set_away(True) is True
+    assert st.realised_notifications == 1
+    assert st.ignored_notifications == 0
+
+
+def test_away_twice_counts_once():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    _sit(st, 25)
+    assert st.set_away(True) is True
+    assert st.set_away(True) is False
+    assert st.realised_notifications == 1
+
+
+def test_sitting_is_not_counted_while_away():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    st.set_away(True)
+    for _ in range(100):
+        st.increment_sitting_time()
+    assert st.sitting_time == 0
+    assert st.should_alert() is False
+
+
+def test_sitting_resumes_from_zero_after_coming_back():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    _sit(st, 25)
+    st.set_away(True)
+    st.set_away(False)
+    assert st.away is False
+    _sit(st, 5)
+    assert st.sitting_time == 5
+    assert st.ignored_notifications == 0
+
+
+def test_coming_back_does_not_count_anything():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    assert st.set_away(False) is False
+    assert st.realised_notifications == 0
+
+
+def test_mark_alerted_ignored_while_away():
+    st = status.StatusManager(polling_interval=1, alert_interval=20)
+    _sit(st, 25)
+    st.set_away(True)
+    assert st.mark_alerted() is False
+    assert st.ignored_notifications == 0
+
+
+# ---- work hours -------------------------------------------------------
+class _FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+def test_work_hours_inactive_by_default():
+    st = status.StatusManager()
+    assert st.work_active is False
+    assert st.work_elapsed() == 0
+    assert st.work_elapsed_formatted == "0:00:00"
+
+
+def test_work_hours_start_and_elapsed():
+    clock = _FakeClock()
+    st = status.StatusManager(clock=clock)
+    st.start_work()
+    assert st.work_active is True
+    clock.now += 3725
+    assert st.work_elapsed() == 3725
+    assert st.work_elapsed_formatted == "1:02:05"
+
+
+def test_work_hours_start_twice_keeps_original_start():
+    clock = _FakeClock()
+    st = status.StatusManager(clock=clock)
+    st.start_work()
+    clock.now += 60
+    st.start_work()
+    assert st.work_elapsed() == 60
+
+
+def test_work_hours_stop_resets():
+    clock = _FakeClock()
+    st = status.StatusManager(clock=clock)
+    st.start_work()
+    clock.now += 60
+    st.stop_work()
+    assert st.work_active is False
+    assert st.work_elapsed() == 0
+    st.start_work()
+    assert st.work_elapsed() == 0
+
+
+def test_work_hours_keep_running_while_away():
+    clock = _FakeClock()
+    st = status.StatusManager(clock=clock)
+    st.start_work()
+    st.set_away(True)
+    clock.now += 600
+    assert st.work_elapsed() == 600
